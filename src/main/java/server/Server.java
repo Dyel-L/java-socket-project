@@ -76,5 +76,4 @@ public class Server {
             System.err.println("Erro ao iniciar o servidor: " + e.getMessage());
         }
     }
-
 }
