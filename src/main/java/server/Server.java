@@ -9,83 +9,95 @@ import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Base64;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class Server {
     private final ServerSocket serverSocket;
-    private final ThreadPoolManager threadPoolManager;
+    private final ExecutorService threadPool;
     private static final String AES_KEY = "1234567890123456";
     private static final String XOR_KEY = "secret";
 
     public Server(int port, int poolSize) throws IOException {
         this.serverSocket = new ServerSocket(port);
-        this.threadPoolManager = new ThreadPoolManager(poolSize);
+        this.threadPool = Executors.newFixedThreadPool(poolSize);
     }
 
     public Server(ServerSocket serverSocket, int poolSize) throws IOException {
         this.serverSocket = serverSocket;
-        this.threadPoolManager = new ThreadPoolManager(poolSize);
+        this.threadPool = Executors.newFixedThreadPool(poolSize);
     }
 
     public void start() {
         System.out.println("Servidor iniciado na porta " + serverSocket.getLocalPort());
 
-        while (true) {
-            try {
+        try {
+            while (!serverSocket.isClosed()) {
                 Socket clientSocket = serverSocket.accept();
-                System.out.println("Cliente conectado: " + clientSocket.getInetAddress());
+                System.out.println("Novo cliente conectado: " + clientSocket.getInetAddress());
 
-                BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-                PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
+                threadPool.execute(() -> handleClient(clientSocket));
+            }
+        } catch (IOException e) {
+            shutdown();
+        }
+    }
+
+    private void handleClient(Socket clientSocket) {
+        try (BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+             PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true)) {
+
+            while (true) {
+                out.println("MENU:Escolha o tipo de criptografia: " +
+                        "(1-Caesar) (2-AES) (3-XOR) (4-Base64) (5-Sair)");
+
+                String choice = in.readLine();
+                if (choice == null || choice.equals("5")) {
+                    out.println("SAIR:Saindo...");
+                    break;
+                }
+
+                String algorithm = getAlgorithmName(choice);
+                out.println("ALGORITHM:" + algorithm);
 
                 while (true) {
-                    // Menu com 5 opções agora
-                    out.println("MENU:Escolha o tipo de criptografia: " +
-                            "(1-Caesar) (2-AES) (3-XOR) (4-Base64) (5-Sair)");
+                    out.println("PROMPT:Digite uma mensagem para ser criptografada (ou 'sair' para encerrar):");
+                    String message = in.readLine();
 
-                    String choice = in.readLine();
-                    if (choice == null || choice.equals("5")) {
+                    if (message == null || message.equalsIgnoreCase("sair")) {
                         out.println("SAIR:Saindo...");
                         break;
                     }
 
-                    String algorithm = getAlgorithmName(choice);
-                    out.println("ALGORITHM:" + algorithm);
+                    String encrypted;
+                    try {
+                        encrypted = switch (choice) {
+                            case "1" -> encryptCaesar(message, 3);
+                            case "2" -> encryptAES(message, AES_KEY);
+                            case "3" -> encryptXOR(message, XOR_KEY);
+                            case "4" -> encryptBase64(message);
+                            default -> "Opção inválida";
+                        };
+                        out.println("RESULT:" + encrypted);
+                    } catch (Exception e) {
+                        out.println("ERROR:Erro durante a criptografia: " + e.getMessage());
+                    }
 
-                    while (true) {
-                        out.println("PROMPT:Digite uma mensagem para ser criptografada (ou 'sair' para encerrar):");
-                        String message = in.readLine();
+                    out.println("OPTION:Deseja retornar ao menu (1) ou continuar (2)?");
+                    String option = in.readLine();
 
-                        if (message == null || message.equalsIgnoreCase("sair")) {
-                            out.println("SAIR:Saindo...");
-                            break;
-                        }
-
-                        String encrypted;
-                        try {
-                            encrypted = switch (choice) {
-                                case "1" -> encryptCaesar(message, 3);
-                                case "2" -> encryptAES(message, AES_KEY);
-                                case "3" -> encryptXOR(message, XOR_KEY);
-                                case "4" -> encryptBase64(message);
-                                default -> "Opção inválida";
-                            };
-                            out.println("RESULT:" + encrypted);
-                        } catch (Exception e) {
-                            out.println("ERROR:Erro durante a criptografia: " + e.getMessage());
-                        }
-
-                        out.println("OPTION:Deseja retornar ao menu (1) ou continuar (2)?");
-                        String option = in.readLine();
-
-                        if (option == null || option.equals("1")) {
-                            break;
-                        }
+                    if (option == null || !option.equals("2")) {
+                        break;
                     }
                 }
-
+            }
+        } catch (IOException e) {
+            System.err.println("Erro no tratamento do cliente: " + e.getMessage());
+        } finally {
+            try {
                 clientSocket.close();
             } catch (IOException e) {
-                System.err.println("Erro no servidor: " + e.getMessage());
+                System.err.println("Erro ao fechar socket do cliente: " + e.getMessage());
             }
         }
     }
@@ -135,14 +147,32 @@ public class Server {
         return Base64.getEncoder().encodeToString(text.getBytes());
     }
 
+    public void shutdown() {
+        try {
+            if (serverSocket != null && !serverSocket.isClosed()) {
+                serverSocket.close();
+            }
+            if (threadPool != null && !threadPool.isShutdown()) {
+                threadPool.shutdown();
+            }
+        } catch (IOException e) {
+            System.err.println("Erro ao encerrar servidor: " + e.getMessage());
+        }
+    }
+
     public static void main(String[] args) {
+        Server server = null;
         try {
             int port = 12345;
-            ServerSocket serverSocket = new ServerSocket(port);
-            Server server = new Server(serverSocket, 10);
+            int poolSize = 10;
+            server = new Server(port, poolSize);
             server.start();
         } catch (IOException e) {
-            System.err.println("Erro ao iniciar o servidor: " + e.getMessage());
+            System.err.println("Erro ao iniciar servidor: " + e.getMessage());
+        } finally {
+            if (server != null) {
+                server.shutdown();
+            }
         }
     }
 }
