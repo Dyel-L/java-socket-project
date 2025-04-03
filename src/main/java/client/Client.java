@@ -6,6 +6,7 @@ import java.util.Scanner;
 
 public class Client {
     public static void main(String[] args) {
+        System.out.println("=== CLIENTE INICIADO ===");
         String serverAddress = "localhost";
         int port = 12345;
 
@@ -14,7 +15,7 @@ public class Client {
              PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
              Scanner scanner = new Scanner(System.in)) {
 
-            System.out.println("Conectado ao servidor. Aguardando opções...");
+            System.out.println("Conectado ao servidor. Aguardando opcoes...");
 
             while (true) {
                 String serverMsg = in.readLine();
