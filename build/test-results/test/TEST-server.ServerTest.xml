@@ -1,10 +1,32 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="server.ServerTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2025-03-27T14:10:35" hostname="ARTED22" time="0.028">
+<testsuite name="server.ServerTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2025-04-03T02:34:20" hostname="DYLAN" time="0.533">
   <properties/>
-  <testcase name="testServerAcceptsConnection()" classname="server.ServerTest" time="0.028"/>
+  <testcase name="testServerHandlesMultipleConnections()" classname="server.ServerTest" time="0.022"/>
+  <testcase name="testServerAcceptsConnection()" classname="server.ServerTest" time="0.51"/>
   <system-out><![CDATA[Servidor iniciado na porta 12345
 Cliente conectado: /127.0.0.1
+Servidor iniciado na porta 12345
+Cliente conectado: /127.0.0.1
 ]]></system-out>
-  <system-err><![CDATA[Erro ao iniciar o servidor: Socket closed
+  <system-err><![CDATA[Exception in thread "Thread-3" java.lang.NullPointerException: Cannot invoke "String.equals(Object)" because "choice" is null
+	at server.Server.start(Server.java:45)
+	at server.ServerTest.lambda$setUp$0(ServerTest.java:24)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+Erro no servidor: Uma conexão estabelecida foi anulada pelo software no computador host
+Erro no servidor: Socket is closed
+Erro no servidor: Socket is closed
+Erro no servidor: Socket is closed
+Erro no servidor: Socket is closed
+Erro no servidor: Socket is closed
+Erro no servidor: Socket is closed
+Erro no servidor: Socket is closed
+Erro no servidor: Socket is closed
+Erro no servidor: Socket is closed
+Erro no servidor: Socket is closed
+Erro no servidor: Socket is closed
+Erro no servidor: Socket is closed
+Erro no servidor: Socket is closed
+Erro no servidor: Socket is closed
+Erro no servidor: Socket is closed
 ]]></system-err>
 </testsuite>

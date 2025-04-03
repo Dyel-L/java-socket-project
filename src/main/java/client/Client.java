@@ -14,26 +14,50 @@ public class Client {
              PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
              Scanner scanner = new Scanner(System.in)) {
 
-            System.out.println("Digite uma mensagem para ser criptografada (ou 'sair' para encerrar):");
+            System.out.println("Conectado ao servidor. Aguardando opções...");
 
             while (true) {
-                System.out.print("> ");
-                String message = scanner.nextLine();
+                String serverMsg = in.readLine();
+                if (serverMsg == null) break;
 
-                if (message.equalsIgnoreCase("sair")) {
+                if (serverMsg.startsWith("MENU:")) {
+                    System.out.println(serverMsg.substring(5));
+                    System.out.print("> ");
+                    String choice = scanner.nextLine();
+                    out.println(choice);
+                }
+                else if (serverMsg.startsWith("PROMPT:")) {
+                    System.out.println(serverMsg.substring(7));
+                    System.out.print("> ");
+                    String message = scanner.nextLine();
+                    out.println(message);
+                }
+                else if (serverMsg.startsWith("RESULT:")) {
+                    System.out.println("Resultado criptografado: " + serverMsg.substring(7));
+                }
+                else if (serverMsg.startsWith("OPTION:")) {
+                    System.out.println(serverMsg.substring(7));
+                    System.out.print("> ");
+                    String option = scanner.nextLine();
+                    out.println(option);
+                }
+                else if (serverMsg.startsWith("SAIR:")) {
+                    System.out.println(serverMsg.substring(5));
                     break;
                 }
-
-                // Envia a mensagem para o servidor
-                out.println(message);
-
-                // Recebe e exibe a mensagem criptografada
-                String response = in.readLine();
-                System.out.println("Mensagem criptografada do servidor: " + response);
+                else if (serverMsg.startsWith("ALGORITHM:")) {
+                    // Apenas para debug - pode ser removido
+                    System.out.println("Algoritmo selecionado: " + serverMsg.substring(10));
+                }
+                else {
+                    System.out.println("Mensagem do servidor: " + serverMsg);
+                }
             }
 
         } catch (IOException e) {
             System.err.println("Erro no cliente: " + e.getMessage());
+        } finally {
+            System.out.println("Conexão encerrada.");
         }
     }
 }
