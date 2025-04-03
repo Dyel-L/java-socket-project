@@ -14,16 +14,15 @@ public class Server {
     private final ServerSocket serverSocket;
     private final ThreadPoolManager threadPoolManager;
     private static final String AES_KEY = "1234567890123456";
+    private static final String XOR_KEY = "secret";
 
-    // Construtor original que usa porta e poolSize
     public Server(int port, int poolSize) throws IOException {
-        this.serverSocket = new ServerSocket(port);  // Criação do ServerSocket com a porta
+        this.serverSocket = new ServerSocket(port);
         this.threadPoolManager = new ThreadPoolManager(poolSize);
     }
 
-    // Novo construtor que recebe um ServerSocket
     public Server(ServerSocket serverSocket, int poolSize) throws IOException {
-        this.serverSocket = serverSocket;  // Usando o ServerSocket fornecido
+        this.serverSocket = serverSocket;
         this.threadPoolManager = new ThreadPoolManager(poolSize);
     }
 
@@ -39,16 +38,17 @@ public class Server {
                 PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
 
                 while (true) {
-                    // Envia o menu de opções
-                    out.println("MENU:Escolha o tipo de criptografia: (1-Criptografia Caesar) (2-Criptografia AES) (3-Sair)");
+                    // Menu com 5 opções agora
+                    out.println("MENU:Escolha o tipo de criptografia: " +
+                            "(1-Caesar) (2-AES) (3-XOR) (4-Base64) (5-Sair)");
 
                     String choice = in.readLine();
-                    if (choice == null || choice.equals("3")) {
+                    if (choice == null || choice.equals("5")) {
                         out.println("SAIR:Saindo...");
                         break;
                     }
 
-                    String algorithm = choice.equals("1") ? "CAESAR" : "AES";
+                    String algorithm = getAlgorithmName(choice);
                     out.println("ALGORITHM:" + algorithm);
 
                     while (true) {
@@ -60,16 +60,25 @@ public class Server {
                             break;
                         }
 
-                        String encrypted = choice.equals("1")
-                                ? encryptCaesar(message, 3)
-                                : encryptAES(message, AES_KEY);
-                        out.println("RESULT:" + encrypted);
+                        String encrypted;
+                        try {
+                            encrypted = switch (choice) {
+                                case "1" -> encryptCaesar(message, 3);
+                                case "2" -> encryptAES(message, AES_KEY);
+                                case "3" -> encryptXOR(message, XOR_KEY);
+                                case "4" -> encryptBase64(message);
+                                default -> "Opção inválida";
+                            };
+                            out.println("RESULT:" + encrypted);
+                        } catch (Exception e) {
+                            out.println("ERROR:Erro durante a criptografia: " + e.getMessage());
+                        }
 
                         out.println("OPTION:Deseja retornar ao menu (1) ou continuar (2)?");
                         String option = in.readLine();
 
                         if (option == null || option.equals("1")) {
-                            break; // Volta ao menu
+                            break;
                         }
                     }
                 }
@@ -79,6 +88,16 @@ public class Server {
                 System.err.println("Erro no servidor: " + e.getMessage());
             }
         }
+    }
+
+    private String getAlgorithmName(String choice) {
+        return switch (choice) {
+            case "1" -> "CAESAR";
+            case "2" -> "AES";
+            case "3" -> "XOR";
+            case "4" -> "BASE64";
+            default -> "UNKNOWN";
+        };
     }
 
     private static String encryptCaesar(String text, int shift) {
@@ -94,16 +113,26 @@ public class Server {
         return result.toString();
     }
 
-    private static String encryptAES(String text, String key) throws IOException {
-        try {
-            SecretKeySpec secretKey = new SecretKeySpec(key.getBytes(), "AES");
-            Cipher cipher = Cipher.getInstance("AES");
-            cipher.init(Cipher.ENCRYPT_MODE, secretKey);
-            byte[] encrypted = cipher.doFinal(text.getBytes());
-            return Base64.getEncoder().encodeToString(encrypted);
-        } catch (Exception e) {
-            throw new IOException("Erro na criptografia AES", e);
+    private static String encryptAES(String text, String key) throws Exception {
+        SecretKeySpec secretKey = new SecretKeySpec(key.getBytes(), "AES");
+        Cipher cipher = Cipher.getInstance("AES");
+        cipher.init(Cipher.ENCRYPT_MODE, secretKey);
+        byte[] encrypted = cipher.doFinal(text.getBytes());
+        return Base64.getEncoder().encodeToString(encrypted);
+    }
+
+    private static String encryptXOR(String text, String key) {
+        StringBuilder result = new StringBuilder();
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+            char k = key.charAt(i % key.length());
+            result.append((char) (c ^ k));
         }
+        return Base64.getEncoder().encodeToString(result.toString().getBytes());
+    }
+
+    private static String encryptBase64(String text) {
+        return Base64.getEncoder().encodeToString(text.getBytes());
     }
 
     public static void main(String[] args) {
